@@ -1,0 +1,58 @@
+service:
+  name: certificate
+
+plugins: 
+  - serverless-offline
+  - serverless-esbuild
+  - serverless-dynamodb-local
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node14
+    exclude: aws-sdk
+    platform: node
+    concurrency: 10
+    define:
+      require.resolve: 'undefined'
+  dynamodb:
+    stages:
+      - dev
+      - local
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+      
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: sa-east-1
+
+
+functions:
+  generateCertificate:
+    handler: src/functions/generateCertificate.handle
+    events:
+      - http:
+          path: /generateCertificate
+          method: POST
+          cors: true
+
+resources:
+  Resources:
+    dbCertificateUsers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: users_certificate
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
